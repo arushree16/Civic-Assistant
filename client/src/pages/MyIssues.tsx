@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { useIssues, useSimulateUpdate } from "@/hooks/use-issues";
 import { StatusBadge } from "@/components/ui/StatusBadge";
