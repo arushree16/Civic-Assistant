@@ -5,6 +5,7 @@ export interface IStorage {
   getIssue(id: number): Promise<Issue | undefined>;
   createIssue(issue: InsertIssue): Promise<Issue>;
   updateIssueStatus(id: number, status: string, updates: any[]): Promise<Issue>;
+  simulateTimePassing(days: number): Promise<void>;
   
   getMessages(): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
@@ -27,6 +28,9 @@ export class MemStorage implements IStorage {
   }
 
   private seedData() {
+    const now = new Date();
+    const threeDaysAgo = new Date(now.getTime() - (3 * 24 * 60 * 60 * 1000));
+    
     const seedIssues: InsertIssue[] = [
       {
         description: "Garbage piled up at the corner of MG Road",
@@ -62,7 +66,19 @@ export class MemStorage implements IStorage {
       }
     ];
 
-    seedIssues.forEach(issue => this.createIssue(issue));
+    seedIssues.forEach(issueData => {
+      const id = this.issueIdCounter++;
+      const issue: Issue = {
+        id,
+        ...issueData,
+        createdAt: threeDaysAgo,
+        resolvedAt: issueData.status === "Resolved" ? now : null,
+        updates: [{ status: "Reported", date: threeDaysAgo.toISOString() }],
+        affectedCount: issueData.affectedCount || 1,
+        daysUnresolved: issueData.daysUnresolved || 0,
+      };
+      this.issues.set(id, issue);
+    });
 
     const seedMessages: InsertMessage[] = [
       { role: "assistant", content: "Hello! I am Nagrik Seva, your civic help partner. Describe your issue, and I'll help you report it." }
@@ -83,14 +99,13 @@ export class MemStorage implements IStorage {
     const now = new Date();
     const issue: Issue = {
       id,
-      description: insertIssue.description,
-      category: insertIssue.category,
-      location: insertIssue.location,
+      ...insertIssue,
+      createdAt: now,
+      resolvedAt: null,
       status: insertIssue.status || "Reported",
       affectedCount: insertIssue.affectedCount || 1,
-      daysUnresolved: insertIssue.daysUnresolved || 0,
-      createdAt: now,
-      updates: insertIssue.updates || [{ status: "Reported", date: now.toISOString() }],
+      daysUnresolved: 0,
+      updates: [{ status: "Reported", date: now.toISOString() }],
     };
     this.issues.set(id, issue);
     return issue;
@@ -100,9 +115,19 @@ export class MemStorage implements IStorage {
     const issue = this.issues.get(id);
     if (!issue) throw new Error("Issue not found");
 
-    const updatedIssue = { ...issue, status, updates: newUpdates };
+    const resolvedAt = status === "Resolved" ? new Date() : issue.resolvedAt;
+    const updatedIssue = { ...issue, status, updates: newUpdates, resolvedAt };
     this.issues.set(id, updatedIssue);
     return updatedIssue;
+  }
+
+  async simulateTimePassing(days: number): Promise<void> {
+    for (const [id, issue] of this.issues) {
+      if (issue.status !== "Resolved") {
+        issue.daysUnresolved = (issue.daysUnresolved || 0) + days;
+        this.issues.set(id, issue);
+      }
+    }
   }
 
   async getMessages(): Promise<Message[]> {

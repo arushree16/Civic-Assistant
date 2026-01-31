@@ -52,6 +52,12 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  app.post(api.issues.simulateDays.path, async (req, res) => {
+    const { days } = api.issues.simulateDays.input.parse(req.body);
+    await storage.simulateTimePassing(days);
+    res.json({ message: `Simulated ${days} days passing.` });
+  });
+
   // Messages
   app.get(api.messages.list.path, async (req, res) => {
     const messages = await storage.getMessages();
@@ -74,6 +80,8 @@ export async function registerRoutes(
     let importance = "Important for community well-being.";
     let helpline = "1800-CIVIC-HELP";
     let actions = ["Provide clear details", "Upload a photo if possible"];
+    let riskLevel: 'low' | 'medium' | 'high' = 'low';
+    let advice = "Your feedback helps improve our city services.";
 
     if (lowerText.match(/garbage|waste|trash|dump|smell|dirty|clean/)) {
       category = "Waste";
@@ -81,30 +89,40 @@ export async function registerRoutes(
       importance = "Garbage accumulation can spread disease and attract pests.";
       helpline = "1800-WASTE-MGT";
       actions = ["Avoid the area if possible", "Report to local sanitation", "Take a photo"];
+      riskLevel = 'medium';
+      advice = "Proper waste management is key to urban hygiene. Avoid physical contact with waste.";
     } else if (lowerText.match(/water|leak|pipe|sewage|flood|supply|drain/)) {
       category = "Water";
       department = "Water Board (Jal Board)";
       importance = "Water leaks waste resources and can cause structural damage.";
       helpline = "1800-WATER-FIX";
       actions = ["Close main valve if possible", "Do not drink contaminated water"];
+      riskLevel = 'high';
+      advice = "Standing water is a breeding ground for mosquitoes. Report leaks immediately to save water.";
     } else if (lowerText.match(/air|smoke|pollution|dust|burn|fumes/)) {
       category = "Air";
       department = "Pollution Control Board";
       importance = "Poor air quality affects respiratory health.";
       helpline = "1800-AIR-CARE";
       actions = ["Wear a mask", "Keep windows closed"];
+      riskLevel = 'high';
+      advice = "High pollution levels detected. Vulnerable groups should stay indoors.";
     } else if (lowerText.match(/road|pothole|traffic|bus|transport|street|signal|light/)) {
       category = "Transport";
       department = "Roads & Transport Authority";
       importance = "Damaged roads cause accidents and traffic delays.";
       helpline = "1800-ROAD-SAFE";
       actions = ["Drive slowly", "Report exact location"];
+      riskLevel = 'medium';
+      advice = "Road safety is a shared responsibility. Alert others to the hazard.";
     } else if (lowerText.match(/energy|power|electric|outage|pole|wire|shock/)) {
       category = "Energy";
       department = "Electricity Department";
       importance = "Exposed wires or outages can be dangerous.";
       helpline = "1800-POWER-OFF";
       actions = ["Stay away from wires", "Report immediately"];
+      riskLevel = 'high';
+      advice = "Electrical hazards can be fatal. Do not attempt to fix wires yourself.";
     }
 
     res.json({
@@ -112,7 +130,9 @@ export async function registerRoutes(
       department,
       importance,
       helpline,
-      actions
+      actions,
+      riskLevel,
+      advice
     });
   });
 

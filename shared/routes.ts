@@ -34,6 +34,14 @@ export const api = {
         404: z.object({ message: z.string() }),
       },
     },
+    simulateDays: {
+      method: 'POST' as const,
+      path: '/api/simulate-days',
+      input: z.object({ days: z.number() }),
+      responses: {
+        200: z.object({ message: z.string() }),
+      },
+    },
   },
   messages: {
     list: {
@@ -64,6 +72,8 @@ export const api = {
           department: z.string(),
           helpline: z.string(),
           actions: z.array(z.string()),
+          riskLevel: z.enum(['low', 'medium', 'high']),
+          advice: z.string(),
         }),
       },
     },

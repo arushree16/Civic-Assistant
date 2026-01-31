@@ -12,15 +12,16 @@ export const issues = pgTable("issues", {
   status: text("status").notNull().default("Reported"), // Reported, Forwarded, In Progress, Resolved
   affectedCount: integer("affected_count").default(1),
   daysUnresolved: integer("days_unresolved").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-  updates: jsonb("updates").$type<{ status: string; date: string }[]>().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at"),
+  updates: jsonb("updates").$type<{ status: string; date: string; note?: string }[]>().default([]).notNull(),
 });
 
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
   role: text("role").notNull(), // user, assistant
   content: text("content").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // === SCHEMAS ===
@@ -28,6 +29,7 @@ export const messages = pgTable("messages", {
 export const insertIssueSchema = createInsertSchema(issues).omit({ 
   id: true, 
   createdAt: true,
+  resolvedAt: true,
   updates: true 
 });
 
@@ -50,4 +52,6 @@ export type AnalyzeResponse = {
   department: string;
   helpline: string;
   actions: string[];
+  riskLevel: 'low' | 'medium' | 'high';
+  advice: string;
 };
