@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MapPin, AlertTriangle } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { geocodeArea, isValidCoordinates } from "@/lib/geocoding";
 
 interface Issue {
   id?: string;
@@ -42,8 +43,8 @@ export function InteractiveMap({
   const markersRef = useRef<L.Marker[]>([]);
   const [mapReady, setMapReady] = useState(false);
 
-  // Get coordinates for issue - use actual coordinates if available, otherwise skip
-  const getIssueCoordinates = (issue: Issue) => {
+  // Get coordinates for issue - use actual coordinates if available, otherwise geocode the location string
+  const getIssueCoordinates = async (issue: Issue): Promise<{ lat: number; lng: number } | null> => {
     // Use actual coordinates if they exist and are valid
     if (issue.lat && issue.lng && 
         issue.lat >= -90 && issue.lat <= 90 && 
@@ -52,7 +53,17 @@ export function InteractiveMap({
       return { lat: issue.lat, lng: issue.lng };
     }
     
-    // Return null if no valid coordinates - marker will be skipped
+    // Fallback: try to geocode the location string for existing issues
+    try {
+      const geocoded = await geocodeArea(issue.location);
+      if (geocoded.success && isValidCoordinates(geocoded.lat, geocoded.lng)) {
+        return { lat: geocoded.lat, lng: geocoded.lng };
+      }
+    } catch (error) {
+      console.warn('Failed to geocode location for existing issue:', issue.location, error);
+    }
+    
+    // Return null if no valid coordinates found
     return null;
   };
 
@@ -159,36 +170,60 @@ export function InteractiveMap({
     markersRef.current = [];
 
     // Add issue markers
-    issues.forEach(issue => {
-      const coords = getIssueCoordinates(issue);
+    const addMarkers = async () => {
+      console.log('Processing', issues.length, 'issues for map display');
       
-      // Skip markers without valid coordinates
-      if (!coords) {
-        return;
-      }
-      
-      const color = getMarkerColor(issue.category, issue.daysUnresolved);
-      
-      const marker = L.marker([coords.lat, coords.lng], {
-        icon: createCustomIcon(color, issue.category)
-      }).addTo(mapRefInstance.current!);
+      const markerPromises = issues.map(async (issue) => {
+        console.log('Processing issue:', issue.location, 'Has coordinates:', !!issue.lat, !!issue.lng);
+        
+        const coords = await getIssueCoordinates(issue);
+        
+        console.log('Geocoded coordinates for', issue.location, ':', coords);
+        
+        // Skip markers without valid coordinates
+        if (!coords) {
+          console.log('Skipping marker for issue:', issue.location, '- no valid coordinates');
+          return null;
+        }
+        
+        const color = getMarkerColor(issue.category, issue.daysUnresolved);
+        
+        const marker = L.marker([coords.lat, coords.lng], {
+          icon: createCustomIcon(color, issue.category)
+        }).addTo(mapRefInstance.current!);
 
-      // Add popup
-      const popupContent = `
-        <div style="min-width: 200px;">
-          <h4 style="margin: 0 0 8px 0; color: #1f2937;">${issue.category}</h4>
-          <p style="margin: 0 0 4px 0; font-size: 12px; color: #6b7280;">${issue.location}</p>
-          <p style="margin: 0 0 4px 0; font-size: 12px;">${issue.description}</p>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 11px; color: #6b7280;">Status: ${issue.status}</span>
-            <span style="font-size: 11px; color: #6b7280;">${issue.daysUnresolved || 0} days</span>
+        // Add popup
+        const popupContent = `
+          <div style="min-width: 200px;">
+            <h4 style="margin: 0 0 8px 0; color: #1f2937;">${issue.category}</h4>
+            <p style="margin: 0 0 4px 0; font-size: 12px; color: #6b7280;">${issue.location}</p>
+            <p style="margin: 0 0 4px 0; font-size: 12px;">${issue.description}</p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; color: #6b7280;">Status: ${issue.status}</span>
+              <span style="font-size: 11px; color: #6b7280;">${issue.daysUnresolved || 0} days</span>
+            </div>
           </div>
-        </div>
-      `;
+        `;
+        
+        marker.bindPopup(popupContent);
+        console.log('Added marker for issue:', issue.location, 'at', coords.lat, coords.lng);
+        return marker;
+      });
+
+      // Wait for all markers to be created
+      const markers = await Promise.all(markerPromises);
       
-      marker.bindPopup(popupContent);
-      markersRef.current.push(marker);
-    });
+      console.log('Total markers created:', markers.filter(m => m !== null).length);
+      
+      // Add valid markers to the map and markers array
+      markers.forEach(marker => {
+        if (marker) {
+          markersRef.current.push(marker);
+        }
+      });
+    };
+
+    addMarkers();
 
     // Add user location marker
     if (userLocation) {
