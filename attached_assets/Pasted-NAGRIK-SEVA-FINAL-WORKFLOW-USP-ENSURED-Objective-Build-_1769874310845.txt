@@ -1,0 +1,232 @@
+NAGRIK SEVA — FINAL WORKFLOW (USP-ENSURED)
+
+Objective:
+Build a working web prototype that is better than ticket-based civic apps by ensuring visibility, guidance, memory, and collective context.
+
+🟢 GLOBAL DATA STRUCTURE (FOUNDATION)
+
+Maintain a global state:
+
+issues[] = [{
+  id,
+  issueType,
+  description,
+  area,
+  status,              // Reported → Forwarded → In Progress → Resolved
+  daysUnresolved,
+  peopleAffected,
+  createdAt
+}]
+
+
+This single structure powers ALL USPs.
+
+🔵 SCREEN 1: CHAT / ISSUE INPUT
+User Action
+
+User types:
+
+“Garbage hasn’t been picked up near my house for 3 days”
+
+System Action
+
+Store message
+
+Call analyzeIssue(message)
+
+🔵 AI WORKING IN REAL TIME (HONEST & REALISTIC)
+analyzeIssue(message) does:
+
+Keyword-based classification → Waste
+
+Assigns:
+
+area = "Rohini Sector 9" (mock/GPS)
+
+language = English
+
+📌 AI USP:
+✔ Understands messy human language
+✔ Removes need for forms
+
+🟢 USP #1 — ACTIONABLE GUIDANCE BEFORE SUBMISSION
+Assistant Response
+
+“This looks like a waste management issue.
+Garbage accumulation can spread disease.”
+
+Guidance Card (MANDATORY)
+
+Why this matters
+
+Health risk explanation
+
+What you can do
+✔ Avoid the area
+✔ Upload a photo
+✔ Report to sanitation department
+
+Who handles this
+
+🏢 Municipal Sanitation Department
+
+📞 Helpline
+
+📍 Nearest office
+
+➡ Button: Submit Report
+
+📌 USP CONFIRMED:
+✔ Not just “Complaint submitted”
+✔ User understands impact + action
+
+🔵 SCREEN 2: SUBMIT REPORT
+On Submit
+
+Create issue object:
+
+{
+  id: randomID,
+  issueType: "Waste",
+  description,
+  area,
+  status: "Reported",
+  daysUnresolved: 0,
+  peopleAffected: random(8–20),
+  createdAt: today
+}
+
+
+Push into issues[].
+
+🟢 SCREEN 3: CONFIRMATION (NO FALSE PROMISES)
+
+Show:
+
+✅ Issue logged
+
+Issue ID
+
+Text:
+
+“Report forwarded to local authority via email.”
+
+📌 USP:
+✔ Honest authority interaction
+✔ No fake integration claims
+
+🟣 USP #2 — ISSUES DO NOT DISAPPEAR
+SCREEN 4: TRACKING DASHBOARD
+
+Each issue card shows:
+
+Issue type
+
+Area
+
+Days unresolved
+
+People affected
+
+Status timeline
+
+Buttons
+
+Simulate 1 Day Passed
+
+Increments daysUnresolved
+
+Update Status
+
+Changes status manually
+
+📌 Rules
+❌ Never auto-close
+❌ Never hide unresolved issues
+
+📌 USP CONFIRMED:
+✔ Time visibility
+✔ No silent closure
+
+🔴 USP #3 — PUBLIC VISIBILITY & HEATMAP (KEY DIFFERENTIATOR)
+SCREEN 5: AREA ISSUES OVERVIEW
+Group issues by:
+
+Area
+
+Issue Type
+
+Show list:
+
+“Garbage Issue – Rohini”
+
+“15 people affected”
+
+“Unresolved for 6 days”
+
+🔥 HEATMAP IMPLEMENTATION (MANDATORY)
+
+Create a visual heatmap using colored blocks/circles:
+
+Condition	Color
+daysUnresolved > 5	🔴 Red
+3–5 days	🟡 Yellow
+< 3 days	🟢 Green
+
+Each block represents an area.
+
+Text shown:
+
+“Red areas indicate long-unresolved civic issues.”
+
+📌 USP CONFIRMED:
+✔ Community-level visibility
+✔ Pattern detection
+✔ What competitors DON’T show
+
+🟠 USP #4 — COLLECTIVE CONTEXT (NOT SOLO COMPLAINTS)
+
+In both dashboards, always show:
+
+“X people affected”
+
+“Y reports in this area”
+
+📌 USP CONFIRMED:
+✔ User is not alone
+✔ Issues treated as shared problems
+
+🔔 USP #5 — SMART FOLLOW-UPS
+SCREEN 6: REMINDERS
+
+Button:
+
+Simulate 3 Days Passed
+
+Logic:
+
+if (daysUnresolved > 3) {
+  showReminder()
+}
+
+
+Notification:
+
+“This issue is still unresolved. You may follow up.”
+
+📌 USP CONFIRMED:
+✔ Keeps user engaged
+✔ Prevents drop-off
+
+🧠 FINAL UX RULES (DO NOT BREAK)
+
+✔ Guidance BEFORE submission
+✔ Time always visible
+✔ Heatmap always accessible
+✔ Issues stay public until resolved
+✔ Value exists even if authority does nothing
+
+🏁 FINAL MESSAGE (FOOTER / ABOUT)
+
+“We don’t promise faster fixes.
+We promise problems won’t be silently ignored.”
