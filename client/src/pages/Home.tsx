@@ -142,21 +142,33 @@ export default function Home() {
                     >
                       <div className="bg-primary/5 p-4 border-b border-border/50">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-bold text-primary uppercase tracking-wider">Analysis</span>
-                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
-                            {msg.analysis.importance} Priority
-                          </span>
+                          <span className="text-xs font-bold text-primary uppercase tracking-wider">Guidance Card</span>
+                          <div className="flex gap-1">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                              msg.analysis.riskLevel === 'high' ? 'bg-red-100 text-red-700' :
+                              msg.analysis.riskLevel === 'medium' ? 'bg-orange-100 text-orange-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              {msg.analysis.riskLevel} Risk
+                            </span>
+                          </div>
                         </div>
                         <h3 className="font-display font-bold text-lg text-foreground">{msg.analysis.category}</h3>
                       </div>
                       
                       <div className="p-4 space-y-4">
+                        <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                          <p className="text-xs text-blue-800 font-bold mb-1 uppercase">Why this matters</p>
+                          <p className="text-sm text-blue-900 leading-snug">{msg.analysis.importance}</p>
+                          <p className="text-sm text-blue-900 mt-2 font-medium italic">{msg.analysis.advice}</p>
+                        </div>
+
                         <div>
-                          <p className="text-xs text-muted-foreground font-semibold mb-1">RECOMMENDED ACTIONS</p>
+                          <p className="text-xs text-muted-foreground font-semibold mb-1 uppercase">What you can do</p>
                           <ul className="space-y-1">
                             {msg.analysis.actions.map((action, idx) => (
                               <li key={idx} className="text-sm flex items-start gap-2">
-                                <span className="text-primary mt-1">•</span>
+                                <span className="text-primary mt-1">✔</span>
                                 {action}
                               </li>
                             ))}
@@ -165,12 +177,12 @@ export default function Home() {
                         
                         <div className="flex items-center justify-between text-sm bg-muted/50 p-3 rounded-lg">
                           <div>
-                            <p className="text-xs text-muted-foreground">Responsible Dept</p>
-                            <p className="font-medium text-primary-foreground text-foreground">{msg.analysis.department}</p>
+                            <p className="text-xs text-muted-foreground uppercase font-bold">Who handles this</p>
+                            <p className="font-medium text-foreground">{msg.analysis.department}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Helpline</p>
-                            <div className="flex items-center gap-1 font-mono text-primary">
+                            <p className="text-xs text-muted-foreground uppercase font-bold">Helpline</p>
+                            <div className="flex items-center gap-1 font-mono text-primary font-bold">
                               <Phone size={12} />
                               {msg.analysis.helpline}
                             </div>
@@ -181,7 +193,7 @@ export default function Home() {
                           className="w-full bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
                           onClick={() => handleOpenReport(msg.analysis!, "Issue reported from chat")}
                         >
-                          Proceed to Official Report
+                          Submit Official Report
                           <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                       </div>

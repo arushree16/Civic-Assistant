@@ -31,8 +31,60 @@ export default function AreaOverview() {
             <p className="text-muted-foreground mt-2">Civic health dashboard for your neighborhood.</p>
           </div>
           <div className="text-sm font-medium bg-white px-3 py-1.5 rounded-lg border shadow-sm">
-            Area Code: <span className="text-primary">Indiranagar (560038)</span>
+            Area Code: <span className="text-primary font-bold">Indiranagar (560038)</span>
           </div>
+        </div>
+
+        {/* Heatmap Section (USP) */}
+        <div className="mb-10">
+          <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
+            <span className="w-2 h-6 bg-primary rounded-full"></span>
+            Area Health Heatmap
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
+            ) : (
+              (() => {
+                const areaStats = issues?.reduce((acc, issue) => {
+                  if (!acc[issue.location]) acc[issue.location] = { count: 0, maxDays: 0 };
+                  if (issue.status !== "Resolved") {
+                    acc[issue.location].count++;
+                    acc[issue.location].maxDays = Math.max(acc[issue.location].maxDays, issue.daysUnresolved || 0);
+                  }
+                  return acc;
+                }, {} as Record<string, { count: number; maxDays: number }>);
+
+                // Ensure pre-seeded areas show up if no issues reported yet
+                const areas = Array.from(new Set([...(issues?.map(i => i.location) || []), "MG Road, Block A", "Sector 4 Park", "Market Street", "Central Mall Area"]));
+
+                return areas.map((areaName) => {
+                  const stats = areaStats?.[areaName] || { count: 0, maxDays: 0 };
+                  let colorClass = "bg-green-100 border-green-200 text-green-800";
+                  if (stats.maxDays > 5) colorClass = "bg-red-100 border-red-200 text-red-800";
+                  else if (stats.maxDays >= 3) colorClass = "bg-yellow-100 border-yellow-200 text-yellow-800";
+
+                  return (
+                    <div 
+                      key={areaName} 
+                      className={`p-3 rounded-xl border-2 flex flex-col justify-between h-28 transition-all hover:scale-105 shadow-sm ${colorClass}`}
+                    >
+                      <span className="text-xs font-bold uppercase truncate">{areaName.split(',')[0]}</span>
+                      <div className="flex flex-col">
+                        <span className="text-2xl font-display font-bold">{stats.count}</span>
+                        <span className="text-[10px] font-medium opacity-80 uppercase tracking-tighter">Unresolved</span>
+                      </div>
+                    </div>
+                  );
+                });
+              })()
+            )}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-3 uppercase font-bold tracking-widest flex items-center gap-4">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span> Critical (&gt;5 days)</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500"></span> Warning (3-5 days)</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> Healthy (&lt;3 days)</span>
+          </p>
         </div>
 
         {/* Stats Grid */}

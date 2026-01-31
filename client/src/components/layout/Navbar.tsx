@@ -46,6 +46,11 @@ export function Navbar() {
           })}
         </div>
       </div>
+      <div className="hidden md:block max-w-5xl mx-auto px-4 pb-2">
+        <p className="text-[10px] text-muted-foreground text-center italic border-t border-border/30 pt-2">
+          "We don't promise faster fixes. We promise that problems won't be silently ignored."
+        </p>
+      </div>
     </nav>
   );
 }

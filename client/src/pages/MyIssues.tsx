@@ -11,20 +11,56 @@ import { motion } from "framer-motion";
 export default function MyIssues() {
   const { data: issues, isLoading } = useIssues();
   const simulateUpdate = useSimulateUpdate();
+  const [showFollowUp, setShowFollowUp] = useState(false);
 
   // Sort by newest first
   const sortedIssues = issues?.sort((a, b) => 
     new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
   );
 
+  const simulateDays = async () => {
+    await fetch('/api/simulate-days', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days: 3 }),
+    });
+    setShowFollowUp(true);
+    // Reload data (hack for this turn)
+    window.location.reload();
+  };
+
   return (
     <div className="min-h-screen bg-muted/30 pb-24 md:pb-12 pt-4 md:pt-20">
       <Navbar />
       
       <div className="max-w-4xl mx-auto px-4">
-        <div className="mb-8 mt-12 md:mt-0">
-          <h1 className="text-3xl font-display font-bold text-foreground">My Reported Issues</h1>
-          <p className="text-muted-foreground mt-2">Track the progress of your civic complaints in real-time.</p>
+        {showFollowUp && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl text-orange-800 flex items-start gap-3 shadow-sm"
+          >
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-sm">Smart Follow-up Reminder</p>
+              <p className="text-xs">One or more issues have remained unresolved for over 3 days. You may follow up with the municipal office directly.</p>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="mb-8 mt-12 md:mt-0 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-display font-bold text-foreground">My Issues</h1>
+            <p className="text-muted-foreground mt-2">Track the progress of your civic complaints in real-time.</p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={simulateDays}
+            className="bg-white hover:bg-primary/5 border-primary/20 text-primary font-bold shadow-sm"
+          >
+            Simulate 3 Days Passed
+          </Button>
         </div>
 
         {isLoading ? (
@@ -87,7 +123,10 @@ export default function MyIssues() {
                       </div>
                       <div className="text-right">
                         <span className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Impact</span>
-                        <span className="text-sm font-medium">{issue.affectedCount} Citizens</span>
+                        <div className="flex flex-col items-end">
+                          <span className="text-sm font-bold text-foreground">{issue.affectedCount} Citizens</span>
+                          <span className="text-[10px] text-muted-foreground font-medium">Unresolved: {issue.daysUnresolved} Days</span>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
