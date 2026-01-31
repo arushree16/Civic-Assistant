@@ -1,18 +1,53 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+// === TABLE DEFINITIONS ===
+
+export const issues = pgTable("issues", {
+  id: serial("id").primaryKey(),
+  description: text("description").notNull(),
+  category: text("category").notNull(), // Waste, Water, Air, Transport, Energy
+  location: text("location").notNull(),
+  status: text("status").notNull().default("Reported"), // Reported, Forwarded, In Progress, Resolved
+  affectedCount: integer("affected_count").default(1),
+  daysUnresolved: integer("days_unresolved").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updates: jsonb("updates").$type<{ status: string; date: string }[]>().default([]),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  role: text("role").notNull(), // user, assistant
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+// === SCHEMAS ===
+
+export const insertIssueSchema = createInsertSchema(issues).omit({ 
+  id: true, 
+  createdAt: true,
+  updates: true 
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true
+});
+
+// === TYPES ===
+
+export type Issue = typeof issues.$inferSelect;
+export type InsertIssue = z.infer<typeof insertIssueSchema>;
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+export type AnalyzeRequest = { text: string };
+export type AnalyzeResponse = {
+  category: string;
+  importance: string;
+  department: string;
+  helpline: string;
+  actions: string[];
+};

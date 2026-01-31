@@ -1,0 +1,119 @@
+import { Navbar } from "@/components/layout/Navbar";
+import { useIssues, useSimulateUpdate } from "@/hooks/use-issues";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatDistanceToNow } from "date-fns";
+import { MapPin, ArrowRight, RefreshCw, Calendar } from "lucide-react";
+import { motion } from "framer-motion";
+
+export default function MyIssues() {
+  const { data: issues, isLoading } = useIssues();
+  const simulateUpdate = useSimulateUpdate();
+
+  // Sort by newest first
+  const sortedIssues = issues?.sort((a, b) => 
+    new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
+  );
+
+  return (
+    <div className="min-h-screen bg-muted/30 pb-24 md:pb-12 pt-4 md:pt-20">
+      <Navbar />
+      
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="mb-8 mt-12 md:mt-0">
+          <h1 className="text-3xl font-display font-bold text-foreground">My Reported Issues</h1>
+          <p className="text-muted-foreground mt-2">Track the progress of your civic complaints in real-time.</p>
+        </div>
+
+        {isLoading ? (
+          <div className="grid gap-6 md:grid-cols-2">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-64 w-full rounded-2xl" />
+            ))}
+          </div>
+        ) : sortedIssues?.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
+              <Calendar className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-xl font-bold font-display">No Issues Reported</h3>
+            <p className="text-muted-foreground max-w-sm mt-2 mb-6">
+              You haven't reported any civic issues yet. Use the chat to report your first issue.
+            </p>
+            <Button asChild>
+              <a href="/">Go to Chat</a>
+            </Button>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {sortedIssues?.map((issue, index) => (
+              <motion.div
+                key={issue.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Card className="overflow-hidden border-border/60 shadow-sm hover:shadow-md transition-all duration-300 group bg-white">
+                  <div className="h-2 w-full bg-gradient-to-r from-primary to-accent opacity-80" />
+                  
+                  <CardHeader className="pb-3 pt-5">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="bg-primary/5 px-2.5 py-1 rounded-md text-xs font-bold text-primary uppercase tracking-wider">
+                        {issue.category}
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {issue.createdAt && formatDistanceToNow(new Date(issue.createdAt), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-start gap-4">
+                      <h3 className="font-display font-semibold text-lg line-clamp-2 leading-tight">
+                        {issue.description}
+                      </h3>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center text-sm text-muted-foreground gap-2">
+                      <MapPin className="w-4 h-4 shrink-0 text-primary/70" />
+                      <span className="truncate">{issue.location}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Current Status</span>
+                        <StatusBadge status={issue.status} />
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Impact</span>
+                        <span className="text-sm font-medium">{issue.affectedCount} Citizens</span>
+                      </div>
+                    </div>
+                  </CardContent>
+
+                  <CardFooter className="bg-muted/20 p-4 flex justify-between items-center gap-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-xs w-full hover:bg-white hover:text-primary transition-colors"
+                      onClick={() => simulateUpdate.mutate(issue.id)}
+                      disabled={simulateUpdate.isPending || issue.status === "Resolved"}
+                    >
+                      {simulateUpdate.isPending ? (
+                        <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3.5 h-3.5 mr-2" />
+                      )}
+                      Simulate Update
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

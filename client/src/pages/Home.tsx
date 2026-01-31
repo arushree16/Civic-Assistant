@@ -1,0 +1,256 @@
+import { useState, useRef, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { motion, AnimatePresence } from "framer-motion";
+import { Send, Sparkles, AlertCircle, Phone, ArrowRight, Bot, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useAnalyzeText } from "@/hooks/use-analyze";
+import { useCreateMessage, useMessages } from "@/hooks/use-messages";
+import { ReportModal } from "@/components/issues/ReportModal";
+import { type AnalyzeResponse } from "@shared/schema";
+import { Navbar } from "@/components/layout/Navbar";
+
+// Local type for chat history display
+type ChatItem = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  analysis?: AnalyzeResponse;
+};
+
+const chatSchema = z.object({
+  message: z.string().min(1),
+});
+
+export default function Home() {
+  const [chatHistory, setChatHistory] = useState<ChatItem[]>([
+    {
+      id: "intro",
+      role: "assistant",
+      content: "Namaste! I am Nagrik Seva AI. Tell me about any civic issue you're facing (water, roads, garbage), and I'll help you report it to the right department.",
+    },
+  ]);
+  const [reportModalData, setReportModalData] = useState<{ category: string; description: string } | null>(null);
+  
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const analyze = useAnalyzeText();
+  
+  // Use React Hook Form for input
+  const form = useForm<z.infer<typeof chatSchema>>({
+    resolver: zodResolver(chatSchema),
+  });
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatHistory, analyze.isPending]);
+
+  const onSubmit = (values: z.infer<typeof chatSchema>) => {
+    const userMsg = values.message;
+    form.reset();
+    
+    // Add user message to UI immediately
+    const newHistory: ChatItem[] = [
+      ...chatHistory,
+      { id: Date.now().toString(), role: "user", content: userMsg },
+    ];
+    setChatHistory(newHistory);
+
+    // Call analyze API
+    analyze.mutate({ text: userMsg }, {
+      onSuccess: (data) => {
+        setChatHistory(prev => [
+          ...prev,
+          { 
+            id: (Date.now() + 1).toString(), 
+            role: "assistant", 
+            content: "I've analyzed your issue. Here is the guidance:",
+            analysis: data 
+          }
+        ]);
+      },
+      onError: () => {
+        setChatHistory(prev => [
+          ...prev,
+          { 
+            id: (Date.now() + 1).toString(), 
+            role: "assistant", 
+            content: "I'm having trouble connecting to the server. Please try again." 
+          }
+        ]);
+      }
+    });
+  };
+
+  const handleOpenReport = (analysis: AnalyzeResponse, userOriginalText: string) => {
+    setReportModalData({
+      category: analysis.category,
+      description: userOriginalText, // In a real app we'd grab the actual text from history context
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-muted/30 pb-20 md:pb-0 pt-16 md:pt-20">
+      <Navbar />
+      
+      {/* Header for Mobile */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white/90 backdrop-blur border-b z-40 flex items-center px-4 shadow-sm">
+        <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center mr-3">
+          <AlertCircle size={20} />
+        </div>
+        <h1 className="font-display font-bold text-lg text-primary">Nagrik Seva</h1>
+      </div>
+
+      <main className="max-w-3xl mx-auto px-4 w-full h-[calc(100vh-8rem)] flex flex-col">
+        
+        {/* Chat Area */}
+        <div className="flex-1 overflow-y-auto py-6 space-y-6 scroll-smooth pr-2">
+          <AnimatePresence initial={false}>
+            {chatHistory.map((msg) => (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {msg.role === "assistant" && (
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                    <Bot size={16} className="text-primary" />
+                  </div>
+                )}
+                
+                <div className={`space-y-2 max-w-[85%] ${msg.role === "user" ? "items-end flex flex-col" : ""}`}>
+                  {/* Text Bubble */}
+                  <div
+                    className={`px-5 py-3.5 rounded-2xl text-sm md:text-base leading-relaxed shadow-sm
+                      ${msg.role === "user" 
+                        ? "bg-primary text-primary-foreground rounded-tr-none" 
+                        : "bg-white border border-border/50 text-foreground rounded-tl-none"
+                      }`}
+                  >
+                    {msg.content}
+                  </div>
+
+                  {/* Structured Analysis Card */}
+                  {msg.analysis && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="w-full max-w-sm bg-white rounded-xl border border-border shadow-lg overflow-hidden mt-2"
+                    >
+                      <div className="bg-primary/5 p-4 border-b border-border/50">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold text-primary uppercase tracking-wider">Analysis</span>
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                            {msg.analysis.importance} Priority
+                          </span>
+                        </div>
+                        <h3 className="font-display font-bold text-lg text-foreground">{msg.analysis.category}</h3>
+                      </div>
+                      
+                      <div className="p-4 space-y-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground font-semibold mb-1">RECOMMENDED ACTIONS</p>
+                          <ul className="space-y-1">
+                            {msg.analysis.actions.map((action, idx) => (
+                              <li key={idx} className="text-sm flex items-start gap-2">
+                                <span className="text-primary mt-1">•</span>
+                                {action}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-sm bg-muted/50 p-3 rounded-lg">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Responsible Dept</p>
+                            <p className="font-medium text-primary-foreground text-foreground">{msg.analysis.department}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Helpline</p>
+                            <div className="flex items-center gap-1 font-mono text-primary">
+                              <Phone size={12} />
+                              {msg.analysis.helpline}
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button 
+                          className="w-full bg-primary hover:bg-primary/90 shadow-md shadow-primary/20"
+                          onClick={() => handleOpenReport(msg.analysis!, "Issue reported from chat")}
+                        >
+                          Proceed to Official Report
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+
+                {msg.role === "user" && (
+                  <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0 mt-1">
+                    <User size={16} className="text-accent" />
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {/* Loading Indicator */}
+          {analyze.isPending && (
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }}
+              className="flex gap-3 justify-start"
+            >
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Bot size={16} className="text-primary" />
+              </div>
+              <div className="bg-white border border-border/50 px-5 py-3.5 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
+                <Sparkles size={16} className="text-primary animate-pulse" />
+                <span className="text-sm text-muted-foreground">Analyzing request...</span>
+              </div>
+            </motion.div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input Area */}
+        <div className="py-4 bg-transparent">
+          <form 
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="relative flex items-center gap-2"
+          >
+            <Input 
+              {...form.register("message")}
+              placeholder="Describe your issue (e.g., 'Broken street light at Main St')..."
+              className="h-14 pl-6 pr-14 rounded-full border-border/60 shadow-lg bg-white focus-visible:ring-primary/20 text-base"
+              autoComplete="off"
+            />
+            <Button 
+              type="submit" 
+              size="icon"
+              disabled={!form.watch("message") || analyze.isPending}
+              className="absolute right-2 h-10 w-10 rounded-full bg-primary hover:bg-primary/90 shadow-md transition-all hover:scale-105"
+            >
+              <Send size={18} className="ml-0.5" />
+            </Button>
+          </form>
+          <p className="text-center text-xs text-muted-foreground mt-2">
+            AI can make mistakes. Please verify important information.
+          </p>
+        </div>
+
+      </main>
+
+      <ReportModal 
+        open={!!reportModalData} 
+        onOpenChange={(open) => !open && setReportModalData(null)}
+        prefilledCategory={reportModalData?.category}
+        prefilledDescription={reportModalData?.description}
+      />
+    </div>
+  );
+}
